@@ -4,6 +4,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from urllib.request import urlopen
 import json
+import csv
 from datetime import datetime
 
 data = []
@@ -42,6 +43,7 @@ def _get_old_prices(product_name, product_type, pid):
 
 def get_price_history(url):
     product_name = ''
+    print(url)
     driver.get(url)
 
     chart = driver.find_element(By.ID, 'chartnormal')
@@ -56,9 +58,28 @@ def get_price_history(url):
     _get_old_prices(product_name, product_type, pid)
 
 
-if __name__ == "__main__":
-    get_price_history("https://www.arukereso.hu/videokartya-c3142/asus/geforce-gtx-1050-ti-4gb-gddr5-128bit-ph-gtx1050ti-4g-p350966029/")
+def write_data():
+    header = ['product', 'type', 'price', 'date']
 
-print(data)
+    with open('data.csv', 'w') as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        writer.writerows(data)
+
+
+def main():
+    products_file = open('url.txt', 'r')
+
+    for line in products_file:
+        if len(line.strip()) > 1:
+            get_price_history(line)
+    
+    products_file.close()
+
+    write_data()
+
+
+if __name__ == "__main__":
+    main()
 
 driver.quit()

@@ -6,6 +6,7 @@ from urllib.request import urlopen
 import json
 from datetime import datetime
 
+data = []
 chrome_options = Options()
 chrome_options.add_argument("--headless")
 
@@ -15,9 +16,9 @@ caps['goog:loggingPrefs'] = {'performance': 'ALL'}
 driver = webdriver.Chrome(desired_capabilities=caps, options=chrome_options)
 
 
-def _get_old_prices(pid):
+def _get_old_prices(product_name, product_type, pid):
     url = "https://www.arukereso.hu/Ajax.GetChartData.php?pt=p&pid=" + str(pid)
-    print(url)
+    
     page = urlopen(url)
     html_bytes = page.read()
     html = html_bytes.decode("utf-8")
@@ -28,23 +29,36 @@ def _get_old_prices(pid):
     html = html.replace('ak.chart.formatTitle', '""')
     html = html.replace('ak.chart.buildTooltipBody', '""')
 
-    data = json.loads(html)
-    print(data['chartData']['data']['datasets'][1]['data'])
+    json_data = json.loads(html)
+    avarage_prices = json_data['chartData']['data']['datasets'][1]['data']
 
-    return html
+    for avarage_price in avarage_prices:
+        price = avarage_price['y']
+        timestamp = avarage_price['t'] / 1e3
+        time = datetime.fromtimestamp(timestamp)
+
+        data.append([product_name, product_type, price, time])
 
 
-def get_price_history(product_name, url):
-    print(product_name)
+def get_price_history(url):
+    product_name = ''
     driver.get(url)
 
     chart = driver.find_element(By.ID, 'chartnormal')
     pid = chart.get_attribute("data-pid")
-    print(pid)
-    _get_old_prices(pid)
+    
+    name = driver.find_element(By.XPATH, '/html/body/div[1]/div[2]/div[3]/div[2]/h1')
+    product_name = name.text
+
+    product_type_element = driver.find_element(By.XPATH, '/html/body/div[1]/div[1]/div/div/a[3]')
+    product_type = product_type_element.text
+
+    _get_old_prices(product_name, product_type, pid)
 
 
 if __name__ == "__main__":
-    get_price_history("GTX1050ti", "https://www.arukereso.hu/videokartya-c3142/asus/geforce-gtx-1050-ti-4gb-gddr5-128bit-ph-gtx1050ti-4g-p350966029/")
+    get_price_history("https://www.arukereso.hu/videokartya-c3142/asus/geforce-gtx-1050-ti-4gb-gddr5-128bit-ph-gtx1050ti-4g-p350966029/")
+
+print(data)
 
 driver.quit()
